@@ -1,0 +1,93 @@
+{
+  "rooms": [
+    {
+      "id": "garden-queen",
+      "name": "Garden Queen",
+      "nightlyRate": 185,
+      "capacity": 2,
+      "available": true,
+      "description": "A quiet cocoon with a private terrace overlooking the herb garden.",
+      "amenities": ["Breakfast", "Garden view", "Rain shower"],
+      "imageClass": "room-garden"
+    },
+    {
+      "id": "deluxe-king",
+      "name": "Deluxe King",
+      "nightlyRate": 245,
+      "capacity": 3,
+      "available": true,
+      "description": "Generous light-filled room with a reading nook and freestanding bath.",
+      "amenities": ["Breakfast", "King bed", "Bathtub", "Minibar"],
+      "imageClass": "room-deluxe"
+    },
+    {
+      "id": "pine-suite",
+      "name": "Pine Suite",
+      "nightlyRate": 365,
+      "capacity": 4,
+      "available": true,
+      "description": "Our signature suite with separate lounge, fireplace and forest panorama.",
+      "amenities": ["Breakfast", "Fireplace", "Lounge", "Forest view"],
+      "imageClass": "room-suite"
+    },
+    {
+      "id": "rooftop-loft",
+      "name": "Rooftop Loft",
+      "nightlyRate": 410,
+      "capacity": 2,
+      "available": false,
+      "description": "An intimate top-floor hideaway with a private rooftop deck.",
+      "amenities": ["Rooftop", "King bed", "Champagne bar"],
+      "imageClass": "room-rooftop"
+    }
+  ],
+  "packages": [
+    {
+      "id": "room-only",
+      "name": "Simply Stay",
+      "pricePerNight": 0,
+      "description": "Maximum flexibility for independent travellers.",
+      "features": ["Flexible cancellation", "Wi-Fi"]
+    },
+    {
+      "id": "breakfast",
+      "name": "Morning Ritual",
+      "pricePerNight": 28,
+      "description": "Start slowly with our locally sourced breakfast.",
+      "features": ["Breakfast for all guests", "Late checkout to 12:00"]
+    },
+    {
+      "id": "retreat",
+      "name": "The Haven Retreat",
+      "pricePerNight": 85,
+      "description": "A restorative stay with food and wellness included.",
+      "features": ["Breakfast", "60-minute spa treatment", "Welcome drinks"]
+    }
+  ],
+  "extras": [
+    {
+      "id": "parking",
+      "name": "Secure parking",
+      "description": "Covered parking with EV charging.",
+      "price": 22,
+      "unit": "per night",
+      "maxQuantity": 1
+    },
+    {
+      "id": "airport-transfer",
+      "name": "Airport transfer",
+      "description": "Private one-way transfer.",
+      "price": 65,
+      "unit": "each",
+      "maxQuantity": 2
+    },
+    {
+      "id": "sparkling-wine",
+      "name": "Sparkling wine",
+      "description": "Chilled local sparkling wine on arrival.",
+      "price": 42,
+      "unit": "bottle",
+      "maxQuantity": 3
+    }
+  ]
+}

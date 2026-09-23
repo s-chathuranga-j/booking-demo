@@ -1,0 +1,24 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Haven & Pine Booking Demo API",
+    "version": "1.0.0",
+    "description": "Deterministic API for UI and API automation demonstrations. Data is held in memory and resets when the API container restarts."
+  },
+  "servers": [{ "url": "/api" }],
+  "paths": {
+    "/health": { "get": { "summary": "API health", "responses": { "200": { "description": "Healthy" } } } },
+    "/rooms": { "get": { "summary": "List rooms", "responses": { "200": { "description": "Room catalog" } } } },
+    "/packages": { "get": { "summary": "List packages", "responses": { "200": { "description": "Package catalog" } } } },
+    "/extras": { "get": { "summary": "List extras", "responses": { "200": { "description": "Extras catalog" } } } },
+    "/quotes": { "post": { "summary": "Calculate a booking quote", "responses": { "200": { "description": "Calculated quote" }, "400": { "description": "Validation error" } } } },
+    "/bookings": { "post": { "summary": "Create a confirmed booking", "responses": { "201": { "description": "Created booking" }, "400": { "description": "Validation error" } } } },
+    "/bookings/{reference}": {
+      "get": {
+        "summary": "Get a completed booking",
+        "parameters": [{ "name": "reference", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Booking details" }, "404": { "description": "Booking not found" } }
+      }
+    }
+  }
+}

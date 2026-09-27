@@ -18,7 +18,7 @@ export const nightsBetween = (start, end) => {
   return Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86_400_000))
 }
 
-export function calculateQuote(input) {
+export function calculateQuote(input, { member = false } = {}) {
   required(input && typeof input === 'object', 'INVALID_REQUEST', 'A JSON request body is required.')
   const nights = nightsBetween(input.search?.checkIn, input.search?.checkOut)
   required(nights > 0, 'INVALID_DATES', 'Check-out must be after check-in.', { fields: ['search.checkIn', 'search.checkOut'] })
@@ -41,12 +41,24 @@ export function calculateQuote(input) {
   }
 
   const roomTotal = room.nightlyRate * nights
+  const discount = member ? Number((roomTotal * catalog.memberDiscount).toFixed(2)) : 0
   const packageTotal = selectedPackage.pricePerNight * nights
-  const subtotal = roomTotal + packageTotal + extrasTotal
+  const subtotal = Number((roomTotal - discount + packageTotal + extrasTotal).toFixed(2))
   const taxes = Number((subtotal * 0.12).toFixed(2))
   const total = Number((subtotal + taxes).toFixed(2))
 
-  return { currency: 'EUR', nights, roomTotal, packageTotal, extrasTotal, subtotal, taxes, total, extras: normalizedExtras }
+  return { currency: 'EUR', nights, roomTotal, discount, packageTotal, extrasTotal, subtotal, taxes, total, extras: normalizedExtras }
+}
+
+// The one demo member account. The password comes from DEMO_MEMBER_PASSWORD so tests can keep it out of their text.
+export const memberAccount = { title: 'Ms', firstName: 'Nora', lastName: 'Lind', email: 'member@havenpine.test', tier: 'Pine Circle' }
+
+export function authenticate(credentials, password = process.env.DEMO_MEMBER_PASSWORD ?? 'pine-circle-2026') {
+  const email = typeof credentials?.email === 'string' ? credentials.email.trim().toLowerCase() : ''
+  if (email !== memberAccount.email || credentials?.password !== password) {
+    throw new ApiError(401, 'INVALID_CREDENTIALS', 'The email or password is incorrect.')
+  }
+  return memberAccount
 }
 
 export function validateGuest(guest) {
@@ -68,13 +80,13 @@ export function createReference(lastName) {
   return `HP-${lastName.replace(/[^a-z]/gi, '').slice(0, 3).toUpperCase().padEnd(3, 'X')}-2701`
 }
 
-export function createBooking(input, createdAt = new Date().toISOString()) {
+export function createBooking(input, createdAt = new Date().toISOString(), member = null) {
   validateGuest(input?.guest)
   required(input?.payment?.status === 'approved', 'PAYMENT_NOT_APPROVED', 'An approved payment is required.')
   required(/^\d{4}$/.test(input.payment.lastFour ?? ''), 'INVALID_PAYMENT_REFERENCE', 'Payment lastFour must contain four digits.')
-  required(input.flowVariant === 'standard' || input.flowVariant === 'checkout-guest', 'INVALID_FLOW_VARIANT', 'Unknown booking flow variant.')
+  required(['standard', 'checkout-guest', 'breakfast-included'].includes(input.flowVariant), 'INVALID_FLOW_VARIANT', 'Unknown booking flow variant.')
 
-  const quote = calculateQuote(input)
+  const quote = calculateQuote(input, { member: Boolean(member) })
   const room = catalog.rooms.find((item) => item.id === input.roomId)
   const selectedPackage = catalog.packages.find((item) => item.id === input.packageId)
   const notes = validateNotes(input.notes)
@@ -90,6 +102,7 @@ export function createBooking(input, createdAt = new Date().toISOString()) {
     package: selectedPackage,
     extras: catalog.extras.filter((extra) => quote.extras[extra.id]).map((extra) => ({ ...extra, quantity: quote.extras[extra.id] })),
     guest: input.guest,
+    member: member ? { email: member.email, tier: member.tier } : null,
     payment: { lastFour: input.payment.lastFour, status: 'paid' },
     notes,
     price: quote,

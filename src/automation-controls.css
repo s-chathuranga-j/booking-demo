@@ -139,3 +139,90 @@
     border-top: 0;
   }
 }
+
+.calendar-nav {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.calendar-nav button:disabled {
+  opacity: 0.25;
+}
+
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 22px;
+}
+
+.header-sign-in {
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  text-decoration: none;
+}
+
+.header-member {
+  align-items: center;
+  display: flex;
+  font-size: 13px;
+  gap: 10px;
+}
+
+.member-note {
+  color: var(--green);
+  font-size: 13px;
+  margin: 12px 0 0;
+}
+
+.price s {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.booking-summary .discount dd,
+.booking-details-page .discount dd {
+  color: #17683f;
+}
+
+.sign-in-form {
+  display: grid;
+  gap: 16px;
+  margin: 0 auto;
+  max-width: 420px;
+}
+
+.guest-link {
+  color: var(--green);
+  font-size: 13px;
+  text-align: center;
+}
+
+.demo-badges {
+  bottom: 56px;
+  display: flex;
+  gap: 6px;
+  left: 14px;
+  pointer-events: none;
+  position: fixed;
+  z-index: 10;
+}
+
+.demo-badges span {
+  background: #fff0dd;
+  border: 1px solid #e7bf89;
+  color: #79501e;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 10px;
+  text-transform: uppercase;
+}
+
+.demo-badges .bug {
+  background: #fff0ee;
+  border-color: #d99a9a;
+  color: #a12f2f;
+}

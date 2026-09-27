@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useBooking } from '../BookingContext'
 
@@ -9,12 +9,18 @@ const baseSteps = [
 
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
-  const { state } = useBooking()
-  const steps = state.flowVariant === 'standard'
-    ? [...baseSteps, { path: '/guest-information', label: 'Guest' }, { path: '/checkout', label: 'Payment' }]
-    : [...baseSteps, { path: '/checkout', label: 'Checkout' }]
+  const navigate = useNavigate()
+  const { state, dispatch } = useBooking()
+  const signOut = () => { dispatch({ type: 'SIGN_OUT' }); navigate('/') }
+  const guestAndPayment = [{ path: '/guest-information', label: 'Guest' }, { path: '/checkout', label: 'Payment' }]
+  const steps = state.flowVariant === 'checkout-guest'
+    ? [...baseSteps, { path: '/checkout', label: 'Checkout' }]
+    : state.flowVariant === 'breakfast-included'
+      // Variant: breakfast comes with every room, so there is no package step.
+      ? [...baseSteps.filter((step) => step.path !== '/packages'), ...guestAndPayment]
+      : [...baseSteps, ...guestAndPayment]
   const active = Math.max(0, steps.findIndex((step) => step.path === location.pathname))
-  const showSteps = !['/payment-frame', '/confirmation', '/my-booking'].includes(location.pathname)
+  const showSteps = !['/payment-frame', '/confirmation', '/my-booking', '/sign-in'].includes(location.pathname)
   return (
     <div className="app-shell" data-test-id="layout-shell">
       <header className="site-header" data-test-id="layout-header">
@@ -22,7 +28,12 @@ export function Layout({ children }: { children: ReactNode }) {
           <span className="brand-mark" data-test-id="layout-brand-mark">H&P</span>
           <span className="brand-copy" data-test-id="layout-brand-copy"><strong data-test-id="layout-brand-name">Haven & Pine</strong><small data-test-id="layout-brand-tagline">Boutique Hotel · Berlin</small></span>
         </Link>
-        <a href="tel:+49305550184" className="header-contact" data-test-id="layout-contact-link">Need help? +49 30 555 0184</a>
+        <div className="header-actions" data-test-id="layout-header-actions">
+          <a href="tel:+49305550184" className="header-contact" data-test-id="layout-contact-link">Need help? +49 30 555 0184</a>
+          {state.member
+            ? <span className="header-member" data-test-id="layout-member"><span data-test-id="layout-member-name">{state.member.firstName} · {state.member.tier}</span><button type="button" className="text-button" onClick={signOut} data-test-id="layout-sign-out-button">Sign out</button></span>
+            : location.pathname !== '/sign-in' && <Link to={`/sign-in?next=${location.pathname}`} className="header-sign-in" data-test-id="layout-sign-in-link">Sign in</Link>}
+        </div>
       </header>
       {showSteps && <nav className="steps" aria-label="Booking progress" data-test-id="layout-progress-nav">
         <ol data-test-id="layout-progress-list">{steps.map((step, index) => (
@@ -33,6 +44,11 @@ export function Layout({ children }: { children: ReactNode }) {
         ))}</ol>
       </nav>}
       <main data-test-id="layout-main">{children}</main>
+      {/* aria-hidden keeps the switches out of the accessibility tree, so a test agent cannot read "tax bug" off the page. */}
+      {(state.uiVersion === 'v2' || state.bug === 'tax') && <div className="demo-badges" aria-hidden="true" data-test-id="layout-demo-badges">
+        {state.uiVersion === 'v2' && <span data-test-id="layout-demo-ui-badge">UI v2</span>}
+        {state.bug === 'tax' && <span className="bug" data-test-id="layout-demo-bug-badge">Bug: tax 21%</span>}
+      </div>}
       <footer data-test-id="layout-footer"><span data-test-id="layout-footer-copyright">© 2026 Haven & Pine</span><span data-test-id="layout-footer-note">A fictional hotel for automation demonstrations</span></footer>
     </div>
   )

@@ -1,9 +1,11 @@
 import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { ApiError, calculateQuote, catalog, createBooking } from './domain.mjs'
+import { ApiError, authenticate, calculateQuote, catalog, createBooking } from './domain.mjs'
 
 const bookings = new Map()
+// ponytail: member sessions live in memory like bookings, so an API restart signs everyone out.
+const sessions = new Map()
 const openApiPath = fileURLToPath(new URL('./openapi.json', import.meta.url))
 
 const sendJson = (response, status, payload, requestId) => {
@@ -11,11 +13,20 @@ const sendJson = (response, status, payload, requestId) => {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Request-ID',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-ID',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'X-Request-ID': requestId,
   })
   response.end(JSON.stringify(payload))
+}
+
+// No Authorization header books as a guest; a stale token is an error rather than a silent loss of the member price.
+const memberFor = (request) => {
+  const token = request.headers.authorization?.match(/^Bearer (.+)$/)?.[1]
+  if (!token) return null
+  const member = sessions.get(token)
+  if (!member) throw new ApiError(401, 'SESSION_EXPIRED', 'Your member session has expired. Sign in again to keep member prices.')
+  return member
 }
 
 const readJson = async (request) => {
@@ -51,12 +62,18 @@ export function createApiServer() {
         const specification = JSON.parse(await readFile(openApiPath, 'utf8'))
         return sendJson(response, 200, specification, requestId)
       }
+      if (request.method === 'POST' && url.pathname === '/api/auth/login') {
+        const member = authenticate(await readJson(request))
+        const token = crypto.randomUUID()
+        sessions.set(token, member)
+        return sendJson(response, 200, { data: { token, member } }, requestId)
+      }
       if (request.method === 'POST' && url.pathname === '/api/quotes') {
-        const quote = calculateQuote(await readJson(request))
+        const quote = calculateQuote(await readJson(request), { member: Boolean(memberFor(request)) })
         return sendJson(response, 200, { data: quote }, requestId)
       }
       if (request.method === 'POST' && url.pathname === '/api/bookings') {
-        const booking = createBooking(await readJson(request))
+        const booking = createBooking(await readJson(request), undefined, memberFor(request))
         bookings.set(booking.reference, booking)
         response.setHeader('Location', `/api/bookings/${encodeURIComponent(booking.reference)}`)
         return sendJson(response, 201, { data: booking }, requestId)

@@ -65,8 +65,21 @@ export interface BookingConfirmation {
   paymentLastFour: string
 }
 
+export interface Member {
+  token: string
+  title: string
+  firstName: string
+  lastName: string
+  email: string
+  tier: string
+}
+
 export interface BookingState {
-  flowVariant: 'standard' | 'checkout-guest'
+  flowVariant: 'standard' | 'checkout-guest' | 'breakfast-included'
+  // Demo controls: `v2` renames buttons and labels (UI drift), `tax` charges the wrong tax rate (a real defect).
+  uiVersion: 'v1' | 'v2'
+  bug: 'none' | 'tax'
+  member: Member | null
   search: BookingSearch | null
   roomId: string | null
   packageId: string | null

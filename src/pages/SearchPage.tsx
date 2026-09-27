@@ -2,15 +2,32 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useBooking } from '../BookingContext'
 import type { BookingSearch } from '../types'
-import { formatDate, nightsBetween } from '../utils'
+import { formatDate, nightsBetween, toIsoDate } from '../utils'
 
-const days = Array.from({ length: 31 }, (_, index) => `2026-07-${String(index + 1).padStart(2, '0')}`)
+const monthLabel = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' })
+const dayLabel = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const MONTHS_AHEAD = 11
+
+// The calendar runs from today, so tests pick dates relative to the run ({date+N}) rather than fixed ones.
+const monthDays = (first: Date) => Array.from({ length: new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate() }, (_, index) => new Date(first.getFullYear(), first.getMonth(), index + 1))
+const monthOffset = (from: Date, to: Date) => (to.getFullYear() - from.getFullYear()) * 12 + to.getMonth() - from.getMonth()
 
 export function SearchPage() {
   const navigate = useNavigate()
   const { state, dispatch } = useBooking()
   const [form, setForm] = useState<BookingSearch>({ destination: 'Berlin', checkIn: '', checkOut: '', adults: 2, children: 0, rooms: 1, roomGuests: [{ adults: 2, children: 0 }], accessibleRoom: false, flexibleDates: false })
   const [choosing, setChoosing] = useState<'checkin' | 'checkout' | null>(null)
+  const today = new Date()
+  const todayIso = toIsoDate(today)
+  const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  const [month, setMonth] = useState(thisMonth)
+  const offset = monthOffset(thisMonth, month)
+  const shiftMonth = (by: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + by, 1))
+  const openCalendar = (which: 'checkin' | 'checkout') => {
+    const shown = which === 'checkout' ? form.checkOut || form.checkIn : form.checkIn
+    if (shown) setMonth(new Date(`${shown.slice(0, 7)}-01T12:00:00`))
+    setChoosing(which)
+  }
   const [error, setError] = useState('')
   const chooseDate = (date: string) => {
     if (choosing === 'checkin') { setForm({ ...form, checkIn: date, checkOut: form.checkOut > date ? form.checkOut : '' }); setChoosing('checkout') }
@@ -39,26 +56,27 @@ export function SearchPage() {
       </div>
       <form className="search-card" onSubmit={submit} data-test-id="search-form" noValidate>
         <div className="card-heading" data-test-id="search-card-heading"><p className="eyebrow" data-test-id="search-card-eyebrow">Plan your stay</p><h2 data-test-id="search-card-title">Find a room</h2></div>
-        <div className="flow-switcher" data-test-id="search-flow-switcher"><span data-test-id="search-flow-label">Demo flow</span><Link className={state.flowVariant === 'standard' ? 'active' : ''} to="/?flow=standard" data-test-id="search-standard-flow-link">Standard</Link><Link className={state.flowVariant === 'checkout-guest' ? 'active' : ''} to="/?flow=checkout-guest" data-test-id="search-checkout-guest-flow-link">A/B variant</Link></div>
+        <div className="flow-switcher" data-test-id="search-flow-switcher"><span data-test-id="search-flow-label">Demo flow</span><Link className={state.flowVariant === 'standard' ? 'active' : ''} to="/?flow=standard" data-test-id="search-standard-flow-link">Standard</Link><Link className={state.flowVariant === 'checkout-guest' ? 'active' : ''} to="/?flow=checkout-guest" data-test-id="search-checkout-guest-flow-link">A/B variant</Link><Link className={state.flowVariant === 'breakfast-included' ? 'active' : ''} to="/?flow=breakfast-included" data-test-id="search-breakfast-included-flow-link">Breakfast incl.</Link></div>
         <label data-test-id="search-destination-label">Destination<select value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} data-test-id="search-destination-select"><option data-test-id="search-destination-berlin-option">Berlin, Germany</option><option data-test-id="search-destination-hamburg-option">Hamburg, Germany</option><option data-test-id="search-destination-munich-option">Munich, Germany</option></select></label>
         <div className="stay-fields" data-test-id="search-stay-fields">
-          <button type="button" onClick={() => setChoosing('checkin')} className="date-button" data-test-id="search-checkin-button"><span data-test-id="search-checkin-label">Check in</span><strong data-test-id="search-checkin-value">{form.checkIn ? formatDate(form.checkIn) : 'Select date'}</strong></button>
-          <button type="button" onClick={() => setChoosing('checkout')} className="date-button" data-test-id="search-checkout-button"><span data-test-id="search-checkout-label">Check out</span><strong data-test-id="search-checkout-value">{form.checkOut ? formatDate(form.checkOut) : 'Select date'}</strong></button>
+          <button type="button" onClick={() => openCalendar('checkin')} className="date-button" data-test-id="search-checkin-button"><span data-test-id="search-checkin-label">Check in</span><strong data-test-id="search-checkin-value">{form.checkIn ? formatDate(form.checkIn) : 'Select date'}</strong></button>
+          <button type="button" onClick={() => openCalendar('checkout')} className="date-button" data-test-id="search-checkout-button"><span data-test-id="search-checkout-label">Check out</span><strong data-test-id="search-checkout-value">{form.checkOut ? formatDate(form.checkOut) : 'Select date'}</strong></button>
           <label className="rooms-field" data-test-id="search-rooms-label">Rooms<select value={form.rooms} onChange={(e) => setRoomCount(Number(e.target.value))} data-test-id="search-rooms-select">{[1,2,3].map(n => <option key={n} value={n} data-test-id={`search-rooms-${n}-option`}>{n}</option>)}</select></label>
         </div>
         {choosing && <div className="calendar" data-test-id={`search-${choosing}-calendar`} role="dialog" aria-label={`Choose ${choosing} date`}>
-          <div className="calendar-head" data-test-id={`search-${choosing}-calendar-heading`}><strong data-test-id={`search-${choosing}-calendar-month`}>July 2026</strong><button type="button" onClick={() => setChoosing(null)} aria-label="Close calendar" data-test-id={`search-${choosing}-calendar-close`}>×</button></div>
+          <div className="calendar-head" data-test-id={`search-${choosing}-calendar-heading`}><span className="calendar-nav" data-test-id={`search-${choosing}-calendar-nav`}><button type="button" disabled={offset <= 0} onClick={() => shiftMonth(-1)} aria-label="Previous month" data-test-id={`search-${choosing}-calendar-previous`}>‹</button><strong data-test-id={`search-${choosing}-calendar-month`}>{monthLabel.format(month)}</strong><button type="button" disabled={offset >= MONTHS_AHEAD} onClick={() => shiftMonth(1)} aria-label="Next month" data-test-id={`search-${choosing}-calendar-next`}>›</button></span><button type="button" onClick={() => setChoosing(null)} aria-label="Close calendar" data-test-id={`search-${choosing}-calendar-close`}>×</button></div>
           <div className="weekdays" data-test-id={`search-${choosing}-weekdays`}>{['Mo','Tu','We','Th','Fr','Sa','Su'].map((day) => <span key={day} data-test-id={`search-${choosing}-weekday-${day.toLowerCase()}`}>{day}</span>)}</div>
-          <div className="calendar-grid" data-test-id={`search-${choosing}-calendar-grid`}><i data-test-id={`search-${choosing}-calendar-empty-1`} /><i data-test-id={`search-${choosing}-calendar-empty-2`} />{days.map((date) => {
-            const disabled = choosing === 'checkout' && !!form.checkIn && date <= form.checkIn
-            return <button type="button" key={date} disabled={disabled} className={date === form.checkIn || date === form.checkOut ? 'selected' : ''} onClick={() => chooseDate(date)} data-test-id={`search-${choosing}-day-${date}`}>{Number(date.slice(-2))}</button>
+          <div className="calendar-grid" data-test-id={`search-${choosing}-calendar-grid`}>{Array.from({ length: (month.getDay() + 6) % 7 }, (_, index) => <i key={index} data-test-id={`search-${choosing}-calendar-empty-${index + 1}`} />)}{monthDays(month).map((day) => {
+            const date = toIsoDate(day)
+            const disabled = date < todayIso || (choosing === 'checkout' && !!form.checkIn && date <= form.checkIn)
+            return <button type="button" key={date} disabled={disabled} className={date === form.checkIn || date === form.checkOut ? 'selected' : ''} onClick={() => chooseDate(date)} aria-label={dayLabel.format(day)} data-test-id={`search-${choosing}-day-${date}`}>{day.getDate()}</button>
           })}</div>
         </div>}
         <div className="room-guests-list" data-test-id="search-room-guests-list">{form.roomGuests?.map((room, index) => <details className="room-guests-section" key={index} data-test-id={`search-room-${index + 1}-section`}><summary data-test-id={`search-room-${index + 1}-summary`}><span data-test-id={`search-room-${index + 1}-title`}>Room {index + 1}</span><span data-test-id={`search-room-${index + 1}-occupancy`}>{room.adults} adults, {room.children} children</span></summary><div className="room-guests-fields" data-test-id={`search-room-${index + 1}-fields`}><label data-test-id={`search-room-${index + 1}-adults-label`}>Adults<select value={room.adults} onChange={(e) => setRoomGuests(index, 'adults', Number(e.target.value))} data-test-id={`search-room-${index + 1}-adults-select`}>{[1,2,3,4].map(n => <option key={n} value={n} data-test-id={`search-room-${index + 1}-adults-${n}-option`}>{n}</option>)}</select></label><label data-test-id={`search-room-${index + 1}-children-label`}>Children<select value={room.children} onChange={(e) => setRoomGuests(index, 'children', Number(e.target.value))} data-test-id={`search-room-${index + 1}-children-select`}>{[0,1,2,3].map(n => <option key={n} value={n} data-test-id={`search-room-${index + 1}-children-${n}-option`}>{n}</option>)}</select></label></div></details>)}</div>
         <label className="check-row" data-test-id="search-flexible-label"><input type="checkbox" checked={form.flexibleDates} onChange={(e) => setForm({ ...form, flexibleDates: e.target.checked })} data-test-id="search-flexible-checkbox"/><span data-test-id="search-flexible-text">My dates are flexible (± 2 days)</span></label>
         <label className="check-row" data-test-id="search-accessible-label"><input type="checkbox" checked={form.accessibleRoom} onChange={(e) => setForm({ ...form, accessibleRoom: e.target.checked })} data-test-id="search-accessible-checkbox"/><span data-test-id="search-accessible-text">I need an accessible room</span></label>
         {error && <p className="error" role="alert" data-test-id="search-date-error">{error}</p>}
-        <button className="primary" type="submit" data-test-id="search-submit-button">Search available rooms <span data-test-id="search-submit-arrow">→</span></button>
+        <button className="primary" type="submit" data-test-id="search-submit-button">{state.uiVersion === 'v2' ? 'Check availability' : 'Search available rooms'} <span data-test-id="search-submit-arrow">→</span></button>
       </form>
     </section>
   )

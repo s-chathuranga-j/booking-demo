@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: api/Dockerfile
     container_name: haven-pine-booking-api
+    environment:
+      DEMO_MEMBER_PASSWORD: ${DEMO_MEMBER_PASSWORD:-pine-circle-2026}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001/api/health"]

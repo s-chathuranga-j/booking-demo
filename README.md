@@ -2,6 +2,8 @@
 
 A full-stack hotel booking journey designed for browser, API, and AI-assisted test automation demonstrations.
 
+Every flow, switch and negative path, and how to trigger each one, is listed in [FLOWS.md](FLOWS.md).
+
 The demo now includes a lightweight REST API so the same booking can be exercised through UI tests and direct API tests. API data is stored in memory and resets when the API process or container restarts.
 
 ## Run locally
@@ -19,7 +21,7 @@ Start the UI in another terminal:
 npm run dev
 ```
 
-Open `http://localhost:5173`. The search calendar starts at today and only offers future dates, so tests choose dates relative to the run.
+Open `http://localhost:5173`. The search calendar starts at today, shows two months and only offers future dates, so tests choose dates relative to the run.
 
 ## Run with Docker
 

@@ -226,3 +226,35 @@
   border-color: #d99a9a;
   color: #a12f2f;
 }
+
+.search-card {
+  position: relative;
+}
+
+.calendar:has(.calendar-months) {
+  right: 34px;
+  width: min(620px, calc(100vw - 40px));
+}
+
+.calendar-months {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 6px;
+}
+
+.calendar-month > strong {
+  display: block;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .calendar:has(.calendar-months) {
+    right: 0;
+  }
+
+  .calendar-months {
+    grid-template-columns: 1fr;
+  }
+}

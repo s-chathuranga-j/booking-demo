@@ -5,10 +5,11 @@ import type { BookingSearch } from '../types'
 import { formatDate, nightsBetween, toIsoDate } from '../utils'
 
 const monthLabel = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' })
-const dayLabel = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 const MONTHS_AHEAD = 11
 
 // The calendar runs from today, so tests pick dates relative to the run ({date+N}) rather than fixed ones.
+// Two months are shown, so any date up to four weeks out is on screen without paging, and each day's
+// accessible name is its ISO date, which Saffron records as {date+N}: recordings replay on any day.
 const monthDays = (first: Date) => Array.from({ length: new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate() }, (_, index) => new Date(first.getFullYear(), first.getMonth(), index + 1))
 const monthOffset = (from: Date, to: Date) => (to.getFullYear() - from.getFullYear()) * 12 + to.getMonth() - from.getMonth()
 
@@ -30,7 +31,8 @@ export function SearchPage() {
   }
   const [error, setError] = useState('')
   const chooseDate = (date: string) => {
-    if (choosing === 'checkin') { setForm({ ...form, checkIn: date, checkOut: form.checkOut > date ? form.checkOut : '' }); setChoosing('checkout') }
+    // The check-out calendar starts on the check-in month, so the next few days are always visible.
+    if (choosing === 'checkin') { setForm({ ...form, checkIn: date, checkOut: form.checkOut > date ? form.checkOut : '' }); setMonth(new Date(`${date.slice(0, 7)}-01T12:00:00`)); setChoosing('checkout') }
     else { setForm({ ...form, checkOut: date }); setChoosing(null) }
   }
   const setRoomCount = (rooms: number) => {
@@ -64,12 +66,18 @@ export function SearchPage() {
           <label className="rooms-field" data-test-id="search-rooms-label">Rooms<select value={form.rooms} onChange={(e) => setRoomCount(Number(e.target.value))} data-test-id="search-rooms-select">{[1,2,3].map(n => <option key={n} value={n} data-test-id={`search-rooms-${n}-option`}>{n}</option>)}</select></label>
         </div>
         {choosing && <div className="calendar" data-test-id={`search-${choosing}-calendar`} role="dialog" aria-label={`Choose ${choosing} date`}>
-          <div className="calendar-head" data-test-id={`search-${choosing}-calendar-heading`}><span className="calendar-nav" data-test-id={`search-${choosing}-calendar-nav`}><button type="button" disabled={offset <= 0} onClick={() => shiftMonth(-1)} aria-label="Previous month" data-test-id={`search-${choosing}-calendar-previous`}>‹</button><strong data-test-id={`search-${choosing}-calendar-month`}>{monthLabel.format(month)}</strong><button type="button" disabled={offset >= MONTHS_AHEAD} onClick={() => shiftMonth(1)} aria-label="Next month" data-test-id={`search-${choosing}-calendar-next`}>›</button></span><button type="button" onClick={() => setChoosing(null)} aria-label="Close calendar" data-test-id={`search-${choosing}-calendar-close`}>×</button></div>
-          <div className="weekdays" data-test-id={`search-${choosing}-weekdays`}>{['Mo','Tu','We','Th','Fr','Sa','Su'].map((day) => <span key={day} data-test-id={`search-${choosing}-weekday-${day.toLowerCase()}`}>{day}</span>)}</div>
-          <div className="calendar-grid" data-test-id={`search-${choosing}-calendar-grid`}>{Array.from({ length: (month.getDay() + 6) % 7 }, (_, index) => <i key={index} data-test-id={`search-${choosing}-calendar-empty-${index + 1}`} />)}{monthDays(month).map((day) => {
-            const date = toIsoDate(day)
-            const disabled = date < todayIso || (choosing === 'checkout' && !!form.checkIn && date <= form.checkIn)
-            return <button type="button" key={date} disabled={disabled} className={date === form.checkIn || date === form.checkOut ? 'selected' : ''} onClick={() => chooseDate(date)} aria-label={dayLabel.format(day)} data-test-id={`search-${choosing}-day-${date}`}>{day.getDate()}</button>
+          <div className="calendar-head" data-test-id={`search-${choosing}-calendar-heading`}><span className="calendar-nav" data-test-id={`search-${choosing}-calendar-nav`}><button type="button" disabled={offset <= 0} onClick={() => shiftMonth(-1)} aria-label="Previous month" data-test-id={`search-${choosing}-calendar-previous`}>‹</button><button type="button" disabled={offset >= MONTHS_AHEAD - 1} onClick={() => shiftMonth(1)} aria-label="Next month" data-test-id={`search-${choosing}-calendar-next`}>›</button></span><button type="button" onClick={() => setChoosing(null)} aria-label="Close calendar" data-test-id={`search-${choosing}-calendar-close`}>×</button></div>
+          <div className="calendar-months" data-test-id={`search-${choosing}-calendar-months`}>{[month, new Date(month.getFullYear(), month.getMonth() + 1, 1)].map((shown) => {
+            const key = toIsoDate(shown).slice(0, 7)
+            return <div className="calendar-month" key={key} data-test-id={`search-${choosing}-calendar-${key}`}>
+              <strong data-test-id={`search-${choosing}-calendar-${key}-label`}>{monthLabel.format(shown)}</strong>
+              <div className="weekdays" data-test-id={`search-${choosing}-calendar-${key}-weekdays`}>{['Mo','Tu','We','Th','Fr','Sa','Su'].map((day) => <span key={day} data-test-id={`search-${choosing}-calendar-${key}-weekday-${day.toLowerCase()}`}>{day}</span>)}</div>
+              <div className="calendar-grid" data-test-id={`search-${choosing}-calendar-${key}-grid`}>{Array.from({ length: (shown.getDay() + 6) % 7 }, (_, index) => <i key={index} data-test-id={`search-${choosing}-calendar-${key}-empty-${index + 1}`} />)}{monthDays(shown).map((day) => {
+                const date = toIsoDate(day)
+                const disabled = date < todayIso || (choosing === 'checkout' && !!form.checkIn && date <= form.checkIn)
+                return <button type="button" key={date} disabled={disabled} className={date === form.checkIn || date === form.checkOut ? 'selected' : ''} onClick={() => chooseDate(date)} aria-label={date} data-test-id={`search-${choosing}-day-${date}`}>{day.getDate()}</button>
+              })}</div>
+            </div>
           })}</div>
         </div>}
         <div className="room-guests-list" data-test-id="search-room-guests-list">{form.roomGuests?.map((room, index) => <details className="room-guests-section" key={index} data-test-id={`search-room-${index + 1}-section`}><summary data-test-id={`search-room-${index + 1}-summary`}><span data-test-id={`search-room-${index + 1}-title`}>Room {index + 1}</span><span data-test-id={`search-room-${index + 1}-occupancy`}>{room.adults} adults, {room.children} children</span></summary><div className="room-guests-fields" data-test-id={`search-room-${index + 1}-fields`}><label data-test-id={`search-room-${index + 1}-adults-label`}>Adults<select value={room.adults} onChange={(e) => setRoomGuests(index, 'adults', Number(e.target.value))} data-test-id={`search-room-${index + 1}-adults-select`}>{[1,2,3,4].map(n => <option key={n} value={n} data-test-id={`search-room-${index + 1}-adults-${n}-option`}>{n}</option>)}</select></label><label data-test-id={`search-room-${index + 1}-children-label`}>Children<select value={room.children} onChange={(e) => setRoomGuests(index, 'children', Number(e.target.value))} data-test-id={`search-room-${index + 1}-children-select`}>{[0,1,2,3].map(n => <option key={n} value={n} data-test-id={`search-room-${index + 1}-children-${n}-option`}>{n}</option>)}</select></label></div></details>)}</div>
